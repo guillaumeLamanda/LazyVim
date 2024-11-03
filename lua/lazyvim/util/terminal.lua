@@ -1,13 +1,10 @@
 ---@class lazyvim.util.terminal
----@overload fun(cmd: string|string[], opts: LazyTermOpts): LazyFloat
+---@overload fun(cmd: string|string[], opts: LazyTermOpts): snacks.float
 local M = setmetatable({}, {
   __call = function(m, ...)
     return m.open(...)
   end,
 })
-
----@type table<string,LazyFloat>
-local terminals = {}
 
 ---@param shell? string
 function M.setup(shell)
@@ -40,8 +37,7 @@ function M.setup(shell)
   end
 end
 
----@class LazyTermOpts: LazyCmdOptions
----@field interactive? boolean
+---@class LazyTermOpts: snacks.terminal.Config
 ---@field esc_esc? boolean
 ---@field ctrl_hjkl? boolean
 
@@ -50,19 +46,17 @@ end
 ---@param opts? LazyTermOpts
 function M.open(cmd, opts)
   opts = vim.tbl_deep_extend("force", {
-    ft = "lazyterm",
-    size = { width = 0.9, height = 0.9 },
-    backdrop = LazyVim.has("edgy.nvim") and not cmd and 100 or nil,
-  }, opts or {}, { persistent = true }) --[[@as LazyTermOpts]]
+    float = {
+      backdrop = LazyVim.has("edgy.nvim") and not cmd and 100 or nil,
+      bo = { filetype = "lazyterm" },
+      b = { lazyterm_cmd = cmd },
+    },
+  }, opts or {}) --[[@as LazyTermOpts]]
 
-  local termkey = vim.inspect({ cmd = cmd or "shell", cwd = opts.cwd, env = opts.env, count = vim.v.count1 })
+  local float = Snacks.terminal(cmd, opts)
 
-  if terminals[termkey] and terminals[termkey]:buf_valid() then
-    terminals[termkey]:toggle()
-  else
-    terminals[termkey] = require("lazy.util").float_term(cmd, opts)
-    local buf = terminals[termkey].buf
-    vim.b[buf].lazyterm_cmd = cmd
+  if float:valid() then
+    local buf = float.buf
     if opts.esc_esc == false then
       vim.keymap.set("t", "<esc>", "<esc>", { buffer = buf, nowait = true })
     end
@@ -72,26 +66,9 @@ function M.open(cmd, opts)
       vim.keymap.set("t", "<c-k>", "<c-k>", { buffer = buf, nowait = true })
       vim.keymap.set("t", "<c-l>", "<c-l>", { buffer = buf, nowait = true })
     end
-
-    vim.keymap.set("n", "gf", function()
-      local f = vim.fn.findfile(vim.fn.expand("<cfile>"))
-      if f ~= "" then
-        vim.cmd("close")
-        vim.cmd("e " .. f)
-      end
-    end, { buffer = buf })
-
-    vim.api.nvim_create_autocmd("BufEnter", {
-      buffer = buf,
-      callback = function()
-        vim.cmd.startinsert()
-      end,
-    })
-
-    vim.cmd("noh")
   end
 
-  return terminals[termkey]
+  return float
 end
 
 return M

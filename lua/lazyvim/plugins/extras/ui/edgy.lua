@@ -39,6 +39,14 @@ return {
               return not vim.b[buf].lazyterm_cmd
             end,
           },
+          {
+            ft = "snacks_terminal",
+            title = "Snacks Terminal",
+            size = { height = 0.4 },
+            filter = function(buf)
+              return not vim.b[buf].snacks_terminal_cmd
+            end,
+          },
           "Trouble",
           { ft = "qf", title = "QuickFix" },
           {
